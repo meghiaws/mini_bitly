@@ -23,21 +23,19 @@ A production-ready URL shortener service built with FastAPI, SQLAlchemy 2.0, and
 ## Project Structure
 
 ```
-mini-bitly/
+mini_bitly/
 ├── Dockerfile
 ├── docker-compose.yml
 ├── pyproject.toml
 ├── alembic.ini
 ├── README.md
-├── tests/                    # Tests (placeholder)
-├── docs/                     # Documentation (placeholder)
 └── src/
     ├── app/
     │   ├── main.py          # Application entry point
-    │   ├── api/
+    │   ├── api/             # APIs
     │   │   ├── dependencies.py
-    │   │   └── v1/
-    │   │       └── urls.py  # URL endpoints
+    │   │   └── v1/          
+    │   │       └── urls.py  
     │   ├── core/
     │   │   ├── config.py    # Settings
     │   │   └── db.py        # Database setup
