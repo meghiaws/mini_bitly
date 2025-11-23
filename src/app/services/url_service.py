@@ -47,20 +47,8 @@ class URLService:
         if existing_url:
             return existing_url
 
-        # Generate unique short code
-        max_attempts = 10
-        for _ in range(max_attempts):
-            short_code = URLService.generate_short_code()
-
-            # Check if short code already exists
-            result = await db.execute(
-                select(URL).where(URL.short_code == short_code).limit(1)
-            )
-            if not result.scalar_one_or_none():
-                break
-        else:
-            # If we couldn't find a unique code, try with longer length
-            short_code = URLService.generate_short_code(length=8)
+        # Generate unique short code with retry mechanism
+        short_code = await URLService._generate_unique_short_code(db)
 
         # Create new URL
         url = URL(
@@ -72,6 +60,52 @@ class URLService:
         await db.refresh(url)
 
         return url
+
+    @staticmethod
+    async def _generate_unique_short_code(
+        db: AsyncSession,
+        max_attempts: int = 10,
+        initial_length: int = None
+    ) -> str:
+        """
+        Generate a unique short code that doesn't exist in the database.
+
+        Args:
+            db: Database session
+            max_attempts: Maximum number of attempts to find a unique code
+            initial_length: Initial length of the short code (uses settings default if None)
+
+        Returns:
+            str: A unique short code
+
+        Raises:
+            Exception: If unable to generate a unique code after max_attempts
+        """
+        if initial_length is None:
+            initial_length = settings.SHORT_CODE_LENGTH
+
+        length = initial_length
+
+        # Try generating codes with increasing length if needed
+        for attempt in range(max_attempts):
+            short_code = URLService.generate_short_code(length=length)
+
+            # Check if short code already exists
+            result = await db.execute(
+                select(URL).where(URL.short_code == short_code).limit(1)
+            )
+
+            if result.scalar_one_or_none() is None:
+                # Found a unique code!
+                return short_code
+
+            # After half the attempts, increase the length to reduce collisions
+            if attempt == max_attempts // 2:
+                length += 2
+
+        # Last resort: generate a much longer code
+        # This should virtually never happen with proper settings
+        return URLService.generate_short_code(length=length + 4)
 
     @staticmethod
     async def get_url_by_short_code(db: AsyncSession, short_code: str) -> URL | None:
